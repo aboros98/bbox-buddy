@@ -5,9 +5,12 @@ import CanvasEditor from "@/components/CanvasEditor";
 import ImageSelector from "@/components/ImageSelector";
 import JsonEditor from "@/components/JsonEditor";
 import Onboarding from "@/components/Onboarding";
-import { Dataset, BoundingBox, RawAnnotationDataset, convertRawToInternalFormat } from "@/types/annotation";
+import { Dataset, BoundingBox, RawAnnotationDataset } from "@/types/annotation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { loadDatasetFromFile, isElectron } from "@/utils/electron-file-service";
+import { toast } from "sonner";
 
 const Index = () => {
   const [dataset, setDataset] = useState<Dataset | null>(null);
@@ -18,8 +21,10 @@ const Index = () => {
   };
 
   const handleRawDatasetUpload = (rawData: RawAnnotationDataset) => {
-    const convertedData = convertRawToInternalFormat(rawData);
-    setDataset(convertedData);
+    import("@/types/annotation").then(({ convertRawToInternalFormat }) => {
+      const convertedData = convertRawToInternalFormat(rawData);
+      setDataset(convertedData);
+    });
   };
 
   const handleBoundingBoxesChange = (newBoxes: BoundingBox[]) => {
@@ -37,11 +42,34 @@ const Index = () => {
     });
   };
 
+  const handleOpenDatasetFile = async () => {
+    try {
+      const loadedDataset = await loadDatasetFromFile();
+      if (loadedDataset) {
+        setDataset(loadedDataset);
+        toast.success("Dataset loaded successfully!");
+      }
+    } catch (error) {
+      toast.error("Failed to load dataset");
+      console.error(error);
+    }
+  };
+
   if (!dataset) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <Header />
-        <Onboarding onComplete={handleDatasetChange} onRawDataUpload={handleRawDatasetUpload} />
+        <div className="flex-1 container py-6 px-4 max-w-7xl mx-auto">
+          {isElectron() && (
+            <div className="mb-6">
+              <Button onClick={handleOpenDatasetFile} className="w-full mb-4">
+                Open Dataset File
+              </Button>
+              <Separator className="my-4" />
+            </div>
+          )}
+          <Onboarding onComplete={handleDatasetChange} onRawDataUpload={handleRawDatasetUpload} />
+        </div>
       </div>
     );
   }
