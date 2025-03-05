@@ -28,6 +28,7 @@ const createWindow = () => {
   } else {
     // In dev mode, load from the dev server
     mainWindow.loadURL('http://localhost:8080/');
+    // Enable DevTools in development mode
     mainWindow.webContents.openDevTools();
   }
 };
@@ -53,56 +54,64 @@ app.on('window-all-closed', () => {
 
 // Handle file operations
 ipcMain.handle('open-file-dialog', async () => {
-  if (!mainWindow) return null;
+  if (!mainWindow) return { success: false, error: 'Window not available' };
   
-  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
-    properties: ['openFile'],
-    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-  });
-  
-  if (!canceled && filePaths.length > 0) {
-    const filePath = filePaths[0];
-    try {
-      const data = fs.readFileSync(filePath, 'utf8');
-      return { path: filePath, data };
-    } catch (error) {
-      console.error('Failed to read file', error);
-      throw error;
+  try {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openFile'],
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    });
+    
+    if (!canceled && filePaths.length > 0) {
+      const filePath = filePaths[0];
+      try {
+        const data = fs.readFileSync(filePath, 'utf8');
+        return { success: true, path: filePath, data };
+      } catch (error) {
+        console.error('Failed to read file', error);
+        return { success: false, error: 'Failed to read file' };
+      }
     }
+    return { success: false, error: 'Operation canceled' };
+  } catch (error) {
+    console.error('Error in open-file-dialog:', error);
+    return { success: false, error: String(error) };
   }
-  return null;
 });
 
 ipcMain.handle('save-file-dialog', async (_, data) => {
-  if (!mainWindow) return { success: false };
+  if (!mainWindow) return { success: false, error: 'Window not available' };
   
-  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
-    filters: [{ name: 'JSON Files', extensions: ['json'] }]
-  });
-  
-  if (!canceled && filePath) {
-    try {
-      fs.writeFileSync(filePath, data);
-      return { success: true, path: filePath };
-    } catch (error) {
-      console.error('Failed to save file', error);
-      throw error;
+  try {
+    const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+      filters: [{ name: 'JSON Files', extensions: ['json'] }]
+    });
+    
+    if (!canceled && filePath) {
+      try {
+        fs.writeFileSync(filePath, data);
+        return { success: true, path: filePath };
+      } catch (error) {
+        console.error('Failed to save file', error);
+        return { success: false, error: 'Failed to save file' };
+      }
     }
+    return { success: false, error: 'Operation canceled' };
+  } catch (error) {
+    console.error('Error in save-file-dialog:', error);
+    return { success: false, error: String(error) };
   }
-  return { success: false };
 });
 
 ipcMain.handle('load-image', async (_, imagePath) => {
-  // If the image path is absolute, use it directly
-  // Otherwise, try to find the image in the same directory as the JSON file
   try {
     // Check if file exists
     fs.accessSync(imagePath, fs.constants.F_OK);
     // Return the file path that can be loaded
-    return { path: imagePath };
+    return { success: true, path: imagePath };
   } catch (error) {
     // File doesn't exist, try to resolve relative to directory
     console.error('Image not found at path:', imagePath);
-    return { error: 'Image not found' };
+    return { success: false, error: 'Image not found' };
   }
 });

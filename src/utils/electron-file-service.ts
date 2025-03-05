@@ -1,11 +1,25 @@
 
-import { BoundingBox, Dataset, RawAnnotationDataset, convertRawToInternalFormat } from "@/types/annotation";
+import { Dataset, RawAnnotationDataset, convertRawToInternalFormat } from "@/types/annotation";
 import { formatJsonForExport, convertInternalToRawFormat } from "./annotation-utils";
+
+// Define a type for the window with Electron
+declare global {
+  interface Window {
+    electron?: {
+      ipcRenderer: {
+        invoke: (channel: string, ...args: any[]) => Promise<any>;
+        send: (channel: string, ...args: any[]) => void;
+        on: (channel: string, func: (...args: any[]) => void) => (() => void);
+        once: (channel: string, func: (...args: any[]) => void) => void;
+      };
+    };
+  }
+}
 
 // Check if we're running in Electron
 export const isElectron = (): boolean => {
   // Return true if window.electron exists (this will be injected by our preload script)
-  return window && 'electron' in window;
+  return typeof window !== 'undefined' && window.electron !== undefined;
 };
 
 // Load a dataset from a JSON file using Electron's file dialog
@@ -16,11 +30,12 @@ export const loadDatasetFromFile = async (): Promise<Dataset | null> => {
   }
   
   try {
-    // @ts-ignore - using Electron's IPC renderer
-    const result = await window.electron.ipcRenderer.invoke('open-file-dialog');
-    if (result && result.data) {
+    const result = await window.electron!.ipcRenderer.invoke('open-file-dialog');
+    if (result && result.success && result.data) {
       const parsedData = JSON.parse(result.data) as RawAnnotationDataset;
       return convertRawToInternalFormat(parsedData);
+    } else if (result && !result.success) {
+      console.error('Failed to load dataset:', result.error);
     }
   } catch (error) {
     console.error('Failed to load dataset:', error);
@@ -40,9 +55,13 @@ export const saveDatasetToFile = async (dataset: Dataset): Promise<boolean> => {
     const rawData = convertInternalToRawFormat(dataset);
     const jsonData = formatJsonForExport(rawData);
     
-    // @ts-ignore - using Electron's IPC renderer
-    const result = await window.electron.ipcRenderer.invoke('save-file-dialog', jsonData);
-    return result.success;
+    const result = await window.electron!.ipcRenderer.invoke('save-file-dialog', jsonData);
+    if (result && result.success) {
+      return true;
+    } else {
+      console.error('Failed to save dataset:', result.error);
+      return false;
+    }
   } catch (error) {
     console.error('Failed to save dataset:', error);
     return false;
@@ -57,11 +76,12 @@ export const loadImageFromPath = async (imagePath: string): Promise<string> => {
   }
   
   try {
-    // @ts-ignore - using Electron's IPC renderer
-    const result = await window.electron.ipcRenderer.invoke('load-image', imagePath);
-    if (result.path) {
+    const result = await window.electron!.ipcRenderer.invoke('load-image', imagePath);
+    if (result && result.success && result.path) {
       // For local files, we can use the file:// protocol
       return `file://${result.path}`;
+    } else if (result && !result.success) {
+      console.error('Failed to load image:', result.error);
     }
   } catch (error) {
     console.error('Failed to load image:', error);

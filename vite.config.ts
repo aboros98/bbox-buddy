@@ -19,6 +19,12 @@ export default defineConfig(({ mode }) => ({
     electron([
       {
         entry: 'electron/main.ts',
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            minify: false,
+          }
+        }
       },
       {
         entry: 'electron/preload.ts',
@@ -27,6 +33,12 @@ export default defineConfig(({ mode }) => ({
           // instead of restarting the entire Electron App.
           options.reload();
         },
+        vite: {
+          build: {
+            outDir: 'dist-electron',
+            minify: false,
+          }
+        }
       },
     ]),
     renderer(),
