@@ -4,7 +4,8 @@ import { formatJsonForExport, convertInternalToRawFormat } from "./annotation-ut
 
 // Check if we're running in Electron
 export const isElectron = (): boolean => {
-  return window && window.process && window.process.type === 'renderer';
+  // Return true if window.electron exists (this will be injected by our preload script)
+  return window && 'electron' in window;
 };
 
 // Load a dataset from a JSON file using Electron's file dialog

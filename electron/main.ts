@@ -1,3 +1,4 @@
+
 import { app, BrowserWindow, ipcMain, dialog } from 'electron';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -16,8 +17,8 @@ const createWindow = () => {
     height: 800,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
-      nodeIntegration: true,
-      contextIsolation: false,
+      contextIsolation: true,
+      nodeIntegration: false,
     },
   });
 
@@ -52,7 +53,9 @@ app.on('window-all-closed', () => {
 
 // Handle file operations
 ipcMain.handle('open-file-dialog', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
+  if (!mainWindow) return null;
+  
+  const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile'],
     filters: [{ name: 'JSON Files', extensions: ['json'] }]
   });
@@ -71,7 +74,9 @@ ipcMain.handle('open-file-dialog', async () => {
 });
 
 ipcMain.handle('save-file-dialog', async (_, data) => {
-  const { canceled, filePath } = await dialog.showSaveDialog({
+  if (!mainWindow) return { success: false };
+  
+  const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
     filters: [{ name: 'JSON Files', extensions: ['json'] }]
   });
   
