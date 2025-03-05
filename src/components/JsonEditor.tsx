@@ -5,8 +5,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { formatJsonForExport, convertInternalToRawFormat, convertRawToInternalFormat } from "@/utils/annotation-utils";
-import { Dataset, RawAnnotationDataset } from "@/types/annotation";
+import { formatJsonForExport, convertInternalToRawFormat } from "@/utils/annotation-utils";
+import { Dataset, RawAnnotationDataset, convertRawToInternalFormat } from "@/types/annotation";
 import { Save, Download, Upload, Clipboard, Code } from "lucide-react";
 
 interface JsonEditorProps {
@@ -27,8 +27,20 @@ const JsonEditor: React.FC<JsonEditorProps> = ({ dataset, onDatasetChange }) => 
   const handleSaveClick = () => {
     try {
       const parsedData = JSON.parse(jsonText) as RawAnnotationDataset;
-      const convertedData = convertRawToInternalFormat(parsedData);
-      onDatasetChange(convertedData);
+      
+      // Check if this is a raw format (with annotation.bboxes)
+      if (Array.isArray(parsedData) && parsedData.length > 0 && parsedData[0].annotation && parsedData[0].annotation.bboxes) {
+        const convertedData = convertRawToInternalFormat(parsedData);
+        onDatasetChange(convertedData);
+      } 
+      // Assume it's our internal format or handle accordingly
+      else if (parsedData.images && Array.isArray(parsedData.images)) {
+        onDatasetChange(parsedData);
+      } else {
+        toast.error("Invalid JSON structure");
+        return;
+      }
+      
       setIsEditing(false);
       toast.success("JSON updated successfully");
     } catch (e) {

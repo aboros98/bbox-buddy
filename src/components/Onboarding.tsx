@@ -4,13 +4,14 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Upload, Image } from "lucide-react";
 import { toast } from "sonner";
-import { Dataset, ImageAnnotation } from "@/types/annotation";
+import { Dataset, ImageAnnotation, RawAnnotationDataset } from "@/types/annotation";
 
 interface OnboardingProps {
   onComplete: (dataset: Dataset) => void;
+  onRawDataUpload: (rawData: RawAnnotationDataset) => void;
 }
 
-const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
+const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onRawDataUpload }) => {
   const [dragActive, setDragActive] = useState(false);
 
   const loadSampleData = () => {
@@ -83,14 +84,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         try {
           const json = JSON.parse(event.target?.result as string);
           
-          // Validate JSON format
-          if (!json.images || !Array.isArray(json.images)) {
-            toast.error("Invalid JSON structure. Expected 'images' array.");
-            return;
+          // Check if this is a raw format (with annotation.bboxes)
+          if (Array.isArray(json) && json.length > 0 && json[0].annotation && json[0].annotation.bboxes) {
+            onRawDataUpload(json);
+            toast.success("Raw annotation data loaded successfully");
+          } 
+          // Assume it's our internal format
+          else if (json.images && Array.isArray(json.images)) {
+            onComplete(json);
+            toast.success("JSON file loaded successfully");
+          } else {
+            toast.error("Invalid JSON structure");
           }
-          
-          onComplete(json);
-          toast.success("JSON file loaded successfully");
         } catch (e) {
           toast.error("Invalid JSON file");
         }
@@ -127,14 +132,18 @@ const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
         try {
           const json = JSON.parse(event.target?.result as string);
           
-          // Validate JSON format
-          if (!json.images || !Array.isArray(json.images)) {
-            toast.error("Invalid JSON structure. Expected 'images' array.");
-            return;
+          // Check if this is a raw format (with annotation.bboxes)
+          if (Array.isArray(json) && json.length > 0 && json[0].annotation && json[0].annotation.bboxes) {
+            onRawDataUpload(json);
+            toast.success("Raw annotation data loaded successfully");
           }
-          
-          onComplete(json);
-          toast.success("JSON file loaded successfully");
+          // Assume it's our internal format
+          else if (json.images && Array.isArray(json.images)) {
+            onComplete(json);
+            toast.success("JSON file loaded successfully");
+          } else {
+            toast.error("Invalid JSON structure");
+          }
         } catch (e) {
           toast.error("Invalid JSON file");
         }

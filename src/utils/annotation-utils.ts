@@ -52,39 +52,6 @@ export const denormalizeCoordinates = (
   };
 };
 
-export const convertRawToInternalFormat = (rawData: RawAnnotationDataset): Dataset => {
-  const images = rawData.map(item => {
-    // Extract just the filename from the full path
-    const filename = item.file.split('/').pop() || item.file;
-    
-    const boundingBoxes: BoundingBox[] = item.annotation.bboxes.map((bbox, index) => {
-      // bbox format is [x1, y1, x2, y2]
-      const x = bbox[0];
-      const y = bbox[1];
-      const width = bbox[2] - bbox[0];
-      const height = bbox[3] - bbox[1];
-      const label = item.annotation.labels[index] || "unlabeled";
-      
-      return {
-        id: generateUniqueId(),
-        x,
-        y,
-        width,
-        height,
-        label,
-        color: LABEL_COLORS[label as keyof typeof LABEL_COLORS] || getRandomColor()
-      };
-    });
-    
-    return {
-      filename,
-      boundingBoxes
-    };
-  });
-  
-  return { images };
-};
-
 export const convertInternalToRawFormat = (dataset: Dataset): RawAnnotationDataset => {
   return dataset.images.map(image => {
     const bboxes = image.boundingBoxes.map(box => {
