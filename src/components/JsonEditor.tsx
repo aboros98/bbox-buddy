@@ -3,9 +3,10 @@ import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { formatJsonForExport } from "@/utils/annotation-utils";
-import { Dataset } from "@/types/annotation";
+import { formatJsonForExport, convertInternalToRawFormat, convertRawToInternalFormat } from "@/utils/annotation-utils";
+import { Dataset, RawAnnotationDataset } from "@/types/annotation";
 import { Save, Download, Upload, Clipboard, Code } from "lucide-react";
 
 interface JsonEditorProps {
@@ -18,13 +19,16 @@ const JsonEditor: React.FC<JsonEditorProps> = ({ dataset, onDatasetChange }) => 
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
-    setJsonText(formatJsonForExport(dataset));
+    // Convert to the raw format when displaying
+    const rawFormat = convertInternalToRawFormat(dataset);
+    setJsonText(formatJsonForExport(rawFormat));
   }, [dataset]);
 
   const handleSaveClick = () => {
     try {
-      const parsedData = JSON.parse(jsonText);
-      onDatasetChange(parsedData);
+      const parsedData = JSON.parse(jsonText) as RawAnnotationDataset;
+      const convertedData = convertRawToInternalFormat(parsedData);
+      onDatasetChange(convertedData);
       setIsEditing(false);
       toast.success("JSON updated successfully");
     } catch (e) {
@@ -133,15 +137,17 @@ const JsonEditor: React.FC<JsonEditorProps> = ({ dataset, onDatasetChange }) => 
       </div>
 
       <Card className="relative overflow-hidden">
-        <ScrollArea className="h-[300px]">
-          <Textarea
-            value={jsonText}
-            onChange={(e) => setJsonText(e.target.value)}
-            readOnly={!isEditing}
-            className="font-mono text-sm h-full resize-none border-0 p-4 focus-visible:ring-0"
-            style={{ minHeight: "300px" }}
-          />
-        </ScrollArea>
+        <CardContent className="p-0">
+          <ScrollArea className="h-[300px]">
+            <Textarea
+              value={jsonText}
+              onChange={(e) => setJsonText(e.target.value)}
+              readOnly={!isEditing}
+              className="font-mono text-sm h-full resize-none border-0 p-4 focus-visible:ring-0"
+              style={{ minHeight: "300px" }}
+            />
+          </ScrollArea>
+        </CardContent>
       </Card>
     </div>
   );
